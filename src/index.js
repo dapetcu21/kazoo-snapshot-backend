@@ -26,7 +26,7 @@ async function similarImageExists(hash) {
     attributes: ['hash'],
   })
   const distances = await Promise.all(images.map(image => phash.compare(hash, image.hash)))
-  return distances.reduce(Math.min, Infinity) <= SIMILARITY_TRESHOLD;
+  return distances.reduce((a, b) => Math.min(a, b), Infinity) <= SIMILARITY_TRESHOLD;
 }
 
 app.post('/upload', upload.array('files', 12), (req, res, cb) => {

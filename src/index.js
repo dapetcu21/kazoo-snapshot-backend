@@ -14,6 +14,9 @@ const uuidv4 = require('uuid/v4')
 const db = require('../models/index')
 
 const app = express()
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+
 const port = process.env.PORT || 80
 const upload = multer()
 
@@ -41,21 +44,89 @@ app.post('/upload', upload.array('files', 12), (req, res, cb) => {
     if (await similarImageExists(hash)) {
       console.log('File too similar: ' + file.originalname)
     } else {
+      const id = uuidv4()
       await db.Image.create({
-        id: uuidv4(),
+        id,
         data: file.buffer,
-        hash: hash,
+        hash,
         mimeType: file.mimeType || 'image/jpeg',
         used: false,
       })
+      io.emit('image_upload', { id, used: false })
     }
   })).then(() => {
     res.json({})
-  }, (err) => {
-    cb(err)
-  })
+  }, cb)
 })
 
-app.listen(port, () => {
+app.get('/image/:id', (req, res, cb) => {
+  db.Image.findOne({
+    where: { id: req.params.id },
+    attributes: ['data', 'mimeType'],
+  }).then(image => {
+    if (!image) {
+      res.status(404).end('Not found')
+      return
+    }
+
+    if (image.mimeType) {
+      res.append('Content-Type', image.mimeType)
+    }
+
+    res.end(image.data)
+  }, cb)
+})
+
+app.delete('/image/:id', (req, res, cb) => {
+  db.Image.destroy({
+    where: { id: req.params.id },
+  }).then(() => {
+    res.json({})
+  }, cb)
+})
+
+app.get('/images', (req, res, cb) => {
+  db.Image.findAll({
+    attributes: ['id', 'used'],
+    order: [['createdAt', 'DESC']],
+  }).then(data => {
+    res.json(data)
+  }, cb)
+})
+
+
+app.post('/new_image', (req, res, cb) => {
+  (async function () {
+    const image = await db.Image.findOne({
+      where: { used: false },
+      order: [db.Sequelize.literal('random()')],
+    })
+
+    if (!image) {
+      res.json({})
+      return
+    }
+
+    image.used = true
+    await image.save()
+
+    io.emit('show_image', { id: image.id })
+    res.json({ id: image.id })
+  })().catch(cb)
+})
+
+app.post('/show_image/:id', upload.none(), (req, res, cb) => {
+  io.emit('show_image', { id: req.params.id })
+})
+
+app.post('/hide_image', (req, res, cb) => {
+  io.emit('hide_image')
+})
+
+app.post('/show_qr', (req, res, cb) => {
+  io.emit('show_qr')
+})
+
+http.listen(port, () => {
   console.log(`Listening on port ${port}`)
 })

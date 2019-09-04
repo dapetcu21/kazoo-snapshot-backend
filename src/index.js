@@ -21,6 +21,7 @@ const port = process.env.PORT || 80
 const upload = multer()
 
 app.use(cors())
+app.options('*', cors())
 
 const SIMILARITY_TRESHOLD = 3
 

@@ -10,6 +10,7 @@ const phash = require('phash-im')
 const path = require('path')
 const mktemp = require('mktemp')
 const uuidv4 = require('uuid/v4')
+const bodyParser = require('body-parser')
 
 const db = require('../models/index')
 
@@ -22,6 +23,8 @@ const upload = multer()
 
 app.use(cors())
 app.options('*', cors())
+
+app.use(bodyParser.json())
 
 const SIMILARITY_TRESHOLD = 3
 
@@ -76,6 +79,28 @@ app.get('/image/:id', (req, res, cb) => {
 
     res.end(image.data)
   }, cb)
+})
+
+app.patch('/image/:id', (req, res, cb) => {
+  (async function () {
+    const image = await db.Image.findOne({
+      where: { id: req.params.id },
+      attributes: ['id', 'used', 'mimeType'],
+    })
+
+    if (!image) {
+      res.status(404).end('Not found')
+      return
+    }
+
+    if (typeof req.body.used === 'boolean') {
+      image.used = req.body.used
+    }
+
+    await image.save()
+
+    res.json({})
+  })().catch(cb)
 })
 
 app.delete('/image/:id', (req, res, cb) => {

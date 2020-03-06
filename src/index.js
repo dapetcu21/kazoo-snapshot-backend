@@ -29,11 +29,12 @@ app.use(bodyParser.json())
 const SIMILARITY_TRESHOLD = 3
 
 async function similarImageExists(hash) {
-  const images = await db.Image.findAll({
-    attributes: ['hash'],
-  })
-  const distances = await Promise.all(images.map(image => phash.compare(hash, image.hash)))
-  return distances.reduce((a, b) => Math.min(a, b), Infinity) <= SIMILARITY_TRESHOLD;
+  return true
+  // const images = await db.Image.findAll({
+  //   attributes: ['hash'],
+  // })
+  // const distances = await Promise.all(images.map(image => phash.compare(hash, image.hash)))
+  // return distances.reduce((a, b) => Math.min(a, b), Infinity) <= SIMILARITY_TRESHOLD;
 }
 
 app.post('/upload', upload.array('files', 12), (req, res, cb) => {
@@ -42,7 +43,8 @@ app.post('/upload', upload.array('files', 12), (req, res, cb) => {
     const filename = await mktemp.createFile('XXXXXXXXXXXXXXXXXXXXXX' + extension)
 
     await fs.writeFile(filename, file.buffer)
-    const hash = await phash.compute(filename)
+    // const hash = await phash.compute(filename)
+    const hash = "nohash"
     await fs.unlink(filename)
 
     if (await similarImageExists(hash)) {

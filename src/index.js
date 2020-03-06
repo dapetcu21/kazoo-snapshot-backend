@@ -29,7 +29,7 @@ app.use(bodyParser.json())
 const SIMILARITY_TRESHOLD = 3
 
 async function similarImageExists(hash) {
-  return true
+  return false
   // const images = await db.Image.findAll({
   //   attributes: ['hash'],
   // })
